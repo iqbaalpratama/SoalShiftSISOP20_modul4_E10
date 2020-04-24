@@ -23,7 +23,7 @@ static const char *log_path = "/home/syubban/fs.log";
 int print_info_command(char *command, char *desc){
     time_t t = time(NULL);
     struct tm tm = *localtime(&t);
-    char mains[1000] = "INFO::";
+    char mains[1000];
     sprintf(mains,"INFO::%02d%02d%02d-%02d:%02d:%02d::%s::%s\n",
         tm.tm_year + 1900, tm.tm_mon + 1, 
         tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, command, desc);
@@ -37,7 +37,7 @@ int print_info_command(char *command, char *desc){
 int print_warning_command(char *command, char *desc){
     time_t t = time(NULL);
     struct tm tm = *localtime(&t);
-    char mains[1000] = "INFO::";
+    char mains[1000];
     sprintf(mains,"WARNING::%02d%02d%02d-%02d:%02d:%02d::%s::%s\n",
         tm.tm_year + 1900, tm.tm_mon + 1, 
         tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, command, desc);
