@@ -54,12 +54,17 @@ static int do_getattr(const char *path, struct stat *st){
     
     int res;
     char fpath[1000];
-    sprintf(fpath, "%s/%s", dirpath, path);
-    res = lstat(fpath, st);
-
-    if(res == -1){
-        return -errno;
-    };
+    char paths[100];
+    strcpy(paths, path);
+    if(print_info_command("GETATTR", paths)){
+        sprintf(fpath, "%s/%s", dirpath, path);
+        res = lstat(fpath, st);
+        if(res == -1){
+            return -errno;
+        }else{
+            printf("penulisan dan getattr sukses\n");
+        }
+    }
     return 0;
 }
 
@@ -78,27 +83,29 @@ static int do_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 
     DIR *dp;
     struct dirent *de;
-
+    char paths[100];
+    strcpy(paths, path);
     // (void) offset;
     // (void) fi;
-
-    dp = opendir(fpath);
-    if(dp == NULL){
-        return -errno;
-    }
-
-    while ((de = readdir(dp)) != NULL) {
-        struct stat st;
-        memset(&st, 0, sizeof(st));
-        st.st_ino = de->d_ino;
-        st.st_mode = de->d_type << 12;
-        res = (filler(buf, de->d_name, &st, 0));
-        if(res!=0) {
-            break;
+    if(print_info_command("READDIR", paths)){
+        dp = opendir(fpath);
+        if(dp == NULL){
+            return -errno;
+        }else{
+            while ((de = readdir(dp)) != NULL) {
+            struct stat st;
+            memset(&st, 0, sizeof(st));
+            st.st_ino = de->d_ino;
+            st.st_mode = de->d_type << 12;
+            res = (filler(buf, de->d_name, &st, 0));
+                if(res!=0) {
+                    break;
+                }
+            }
+            printf("penulisan dan readdir sukses\n");
+            closedir(dp);
         }
     }
-
-    closedir(dp);
     return 0;
 }
 
@@ -477,6 +484,7 @@ static int do_rmdir(const char *path){
     }
     return 0;
 }
+
 static int do_unlink(const char *path, mode_t mode){
     printf("Enter => rmdir\n");
     int res;
