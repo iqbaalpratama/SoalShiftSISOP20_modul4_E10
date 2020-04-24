@@ -19,6 +19,42 @@ static const char *log_path = "/home/syubban/fs.log";
     Fungsi ini akan dipanggil ketika sistem meminta SSFS
     untuk atribu-atribut dari file spesifik.  
 */
+char cipher[100]="9(ku@AW1[Lmvgax6q`5Y2Ry?+sF!^HKQiBXCUSe&0M.b%rI'7d)o4~VfZ*{#:}ETt$3J-zpc]lnh8,GwP_ND|jO";
+
+void encrypt(char* str)
+{
+	if(!strcmp(str,".") || !strcmp(str,"..")) return;
+	int panjang = strlen(str);
+	for(int i=0;i<panjang;i++)
+	{
+		for(int j=0;j<87;j++)
+		{
+			if(str[i]==cipher[j])
+			{
+				str[i] = cipher[(j+10)%87];
+				break;
+			}
+		}
+	}
+}
+
+
+void decrypt(char* str)
+{
+	if(!strcmp(str,".") || !strcmp(str,"..")) return;
+	int panjang = strlen(str);
+	for(int i=0;i<panjang;i++)
+	{
+		for(int j=0;j<87;j++)
+		{
+			if(str[i]==cipher[j])
+			{
+				str[i] = cipher[(j+77)%87];
+				break;
+			}
+		}
+	}
+}
 
 int print_info_command(char *command, char *desc){
     time_t t = time(NULL);
