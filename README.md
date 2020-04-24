@@ -66,14 +66,14 @@ MM : Menit dua digit<br>
 SS : Detik dua digit<br>
 CMD : System call yang terpanggil<br>
 DESC : Deskripsi tambahan (bisa lebih dari satu, dipisahkan dengan ::)
-<kbd>
+</kbd>
 
 Contoh format logging nantinya seperti:
 <kbd>
 INFO::200419-18:29:28::MKDIR::/iz1
 INFO::200419-18:29:33::CREAT::/iz1/yena.jpg
 INFO::200419-18:29:33::RENAME::/iz1/yena.jpg::/iz1/yena.jpeg
-<kbd>
+</kbd>
 
 **Jawaban :**
 Solusi kami memiliki konsep untuk setiap system call akan mentrigger fungsi-fungsinya masing-masing pada fuse. Sehingga kami tulis semua fungsi yang sekiranya berkaitan dengan system call dan melakukan pemanggilan fungsi custom untuk melakukan penulisan fle.
