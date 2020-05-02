@@ -493,5 +493,5 @@ Ketika kita mengetikkan command rmdir, format pengetikannya sebagai berikut
 rmdir [nama folder]. Kami sudah menginisiasi full path pada fpath lalu kita concat dengan nama folder. Kemudian kita lakukan pengecekan untuk pemanggilan fungsi print_warning_command lalu diberi value RMDIR dan input path (nama folder). Ketika sukses kita panggil system call sesuai fungsinya lalu print sesuatu.
 
 
-**KENDALA**
+**KENDALA**:
 Belum terlalu memahami fungsi-fungsi FUSE dan cara kerja dari setiap fungsi.  
