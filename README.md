@@ -138,8 +138,213 @@ void encrypt(char* str)
 	}
 }
 ```
-Untuk kode enkripsi `if(!strcmp(str,".") || !strcmp(str,"..")) return;` digunakan agar pada folder dengan nama ",
+Untuk kode enkripsi `if(!strcmp(str,".") || !strcmp(str,"..")) return;` digunakan agar pada folder dengan nama `.` dan `..` tidak ikut terenkripsi
+```c
+for(int i=panjang;i>=0;i--)
+	{
+		if(str[i]=='.')
+        {
+            panjang=i;
+            break;
+        }
+        
+	}
+```
+sedangkan kode diatas digunakan agar ekstensi tidak ikut terenkripsi
+```c
+for (int i = 1; i < panjang; i++)
+    {
+        if (str[i] == '/')
+        {
+            start = i;
+            break;
+        }
+      
+    }
+```
+Kode diatas digunakan untuk mencari awal mula perulangan untuk enkripsi dimana dimulai setelah tanda `/` pertama setelah kata `encv1`
+```c
+for(int i=start;i<panjang;i++)
+	{
+		for(int j=0;j<87;j++)
+		{
+			if(str[i]==cipher[j])
+			{
+				str[i] = cipher[(j+10)%87];
+				break;
+			}
+		}
+	}
+```
+Dan kode diatas yaitu untuk memulai enkripsinya dimana setiap karakter pada nama folder akan digeser sebanyak 10 karakter pada kode cipher yang digunakan.
+Sedangkan pada bagian dekripsi untuk versi 1 hampir sama dengan kode enkripsi
+```c
+void decrypt(char* str)
+{
+	if(!strcmp(str,".") || !strcmp(str,"..")) return;
+	int panjang = strlen(str);
+    int start=0;
+    for(int i=panjang;i>=0;i--)
+	{
+		if(str[i]=='.')
+        {
+            panjang=i;
+            break;
+        }
+        
+	}
+    for (int i = 1; i < panjang; i++)
+    {
+        if (str[i] == '/' || str[i + 1] == '\0')
+        {
+            start = i+1;
+            break;
+        }
+      
+    }
+	for(int i=start;i<panjang;i++)
+	{
+		for(int j=0;j<87;j++)
+		{
+			if(str[i]==cipher[j])
+			{
+				str[i] = cipher[(j+77)%87];
+				break;
+			}
+		}
+	}
+}
+```
+Untuk kode dekripsi `if(!strcmp(str,".") || !strcmp(str,"..")) return;` digunakan agar pada folder dengan nama `.` dan `..` tidak ikut terdekripsi
+```c
+for(int i=panjang;i>=0;i--)
+	{
+		if(str[i]=='.')
+        {
+            panjang=i;
+            break;
+        }
+        
+	}
+```
+sedangkan kode diatas digunakan agar ekstensi tidak ikut terdekripsi.
+Kode berikut digunakan agar pada bagian nama folder yang memiliki `encv1_` tidak terdekripsi
+```c
+ for (int i = 1; i < panjang; i++)
+    {
+        if (str[i] == '/' || str[i + 1] == '\0')
+        {
+            start = i+1;
+            break;
+        }
+      
+    }
+```
+```c
+for(int i=start;i<panjang;i++)
+	{
+		for(int j=0;j<87;j++)
+		{
+			if(str[i]==cipher[j])
+			{
+				str[i] = cipher[(j+77)%87];
+				break;
+			}
+		}
+	}
+```
+Dan kode diatas yaitu untuk memulai dekripsinya dimana setiap karakter pada nama folder akan digeser sebanyak (87-10) atau 77 karakter pada kode cipher yang digunakan
 
+Untuk penggunaannya yaitu pada getattr maka path jika mengandung string `encv1` maka akan didecrypt seperti berikut:
+```c
+static int do_getattr(const char *path, struct stat *st){
+    printf("getattr %s\n",path);
+    
+    int res;
+    char fpath[1000];
+    char paths[100];
+    char name[1000];
+    strcpy(paths, path);
+    strcpy(name,path);
+    if(strstr(path, "encv1_")!=NULL)
+    {
+        decrypt(name);
+    }
+    else
+    {
+        strcpy(name,path);
+    }
+    printf("%s\n", name);
+    if(print_info_command("GETATTR", paths)){
+        sprintf(fpath, "%s/%s", dirpath, name);
+        res = lstat(fpath, st);
+        if(res == -1){
+            return -errno;
+        }else{
+            printf("penulisan dan getattr sukses\n");
+        }
+    }
+    return 0;
+}
+```
+Sedangkan pada readdir, untuk setiap de->d_name dari folder yang mengandung string `encv1` maka harus dienkripsi
+```c
+static int do_readdir(const char *path, void *buf, fuse_fill_dir_t filler, 
+    off_t offset, struct fuse_file_info *fi){
+    printf("readdir\n");
+    char fpath[1000];
+     char name[1000];
+     int mode=0;
+    if(strstr(path, "encv1_")!=NULL)
+    {
+        mode=1;
+    }
+    if(strcmp(path, "/") == 0){
+        path = dirpath;
+        sprintf(fpath, "%s", path);
+    }else{
+        
+        sprintf(fpath, "%s%s", dirpath, path);
+    }
+
+    int res = 0;
+
+    DIR *dp;
+    struct dirent *de;
+    char paths[100];
+   
+    strcpy(paths, path);
+    // (void) offset;
+    // (void) fi;
+    if(print_info_command("READDIR", paths)){
+        dp = opendir(fpath);
+        if(dp == NULL){
+            return -errno;
+        }else{
+            while ((de = readdir(dp)) != NULL) {
+            struct stat st;
+            memset(&st, 0, sizeof(st));
+            st.st_ino = de->d_ino;
+            st.st_mode = de->d_type << 12;
+              char temp[1000];
+            strcpy(temp, de->d_name);
+            if(mode==1)
+            {
+                encrypt(temp);
+            }
+            res = (filler(buf, temp, &st, 0));
+                if(res!=0) {
+                    break;
+                }
+            }
+            printf("penulisan dan readdir sukses\n");
+            closedir(dp);
+        }
+    }
+    return 0;
+}
+```
+Untuk fungsi fungsi lain yaitu akan didecrypt pathnya jika mengandung string `encv1` 
 
 **2. Enkripsi versi 2:**
 1.  Jika sebuah direktori dibuat dengan awalan “encv2_”, maka direktori tersebut akan menjadi direktori terenkripsi menggunakan metode enkripsi v2.
@@ -286,3 +491,7 @@ static  int  do_rmdir(const  char *path){
 ```
 Ketika kita mengetikkan command rmdir, format pengetikannya sebagai berikut 
 rmdir [nama folder]. Kami sudah menginisiasi full path pada fpath lalu kita concat dengan nama folder. Kemudian kita lakukan pengecekan untuk pemanggilan fungsi print_warning_command lalu diberi value RMDIR dan input path (nama folder). Ketika sukses kita panggil system call sesuai fungsinya lalu print sesuatu.
+
+
+**KENDALA**
+Belum terlalu memahami fungsi-fungsi FUSE dan cara kerja dari setiap fungsi.  
