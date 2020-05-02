@@ -13,8 +13,8 @@
 #endif
 
 
-static const char *dirpath = "/home/syubban/Documents";
-static const char *log_path = "/home/syubban/fs.log";
+static const char *dirpath = "/home/iqbaalpratama/Documents";
+static const char *log_path = "/home/iqbaalpratama/fs.log";
 /*
     Fungsi ini akan dipanggil ketika sistem meminta SSFS
     untuk atribu-atribut dari file spesifik.  
@@ -25,7 +25,27 @@ void encrypt(char* str)
 {
 	if(!strcmp(str,".") || !strcmp(str,"..")) return;
 	int panjang = strlen(str);
-	for(int i=0;i<panjang;i++)
+    int start=0;
+    for(int i=panjang;i>=0;i--)
+	{
+		if(str[i]=='.')
+        {
+            panjang=i;
+            break;
+        }
+        
+	}
+    for (int i = 1; i < panjang; i++)
+    {
+        if (str[i] == '/')
+        {
+            start = i;
+            break;
+        }
+      
+    }
+
+	for(int i=start;i<panjang;i++)
 	{
 		for(int j=0;j<87;j++)
 		{
@@ -43,7 +63,26 @@ void decrypt(char* str)
 {
 	if(!strcmp(str,".") || !strcmp(str,"..")) return;
 	int panjang = strlen(str);
-	for(int i=0;i<panjang;i++)
+    int start=0;
+    for(int i=panjang;i>=0;i--)
+	{
+		if(str[i]=='.')
+        {
+            panjang=i;
+            break;
+        }
+        
+	}
+    for (int i = 1; i < panjang; i++)
+    {
+        if (str[i] == '/' || str[i + 1] == '\0')
+        {
+            start = i+1;
+            break;
+        }
+      
+    }
+	for(int i=start;i<panjang;i++)
 	{
 		for(int j=0;j<87;j++)
 		{
@@ -55,7 +94,6 @@ void decrypt(char* str)
 		}
 	}
 }
-
 int print_info_command(char *command, char *desc){
     time_t t = time(NULL);
     struct tm tm = *localtime(&t);
@@ -86,14 +124,25 @@ int print_warning_command(char *command, char *desc){
 
 //info level command
 static int do_getattr(const char *path, struct stat *st){
-    printf("getattr\n");
+    printf("getattr %s\n",path);
     
     int res;
     char fpath[1000];
     char paths[100];
+    char name[1000];
     strcpy(paths, path);
+    strcpy(name,path);
+    if(strstr(path, "encv1_")!=NULL)
+    {
+        decrypt(name);
+    }
+    else
+    {
+        strcpy(name,path);
+    }
+    printf("%s\n", name);
     if(print_info_command("GETATTR", paths)){
-        sprintf(fpath, "%s/%s", dirpath, path);
+        sprintf(fpath, "%s/%s", dirpath, name);
         res = lstat(fpath, st);
         if(res == -1){
             return -errno;
@@ -108,10 +157,17 @@ static int do_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     off_t offset, struct fuse_file_info *fi){
     printf("readdir\n");
     char fpath[1000];
+     char name[1000];
+     int mode=0;
+    if(strstr(path, "encv1_")!=NULL)
+    {
+        mode=1;
+    }
     if(strcmp(path, "/") == 0){
         path = dirpath;
         sprintf(fpath, "%s", path);
     }else{
+        
         sprintf(fpath, "%s%s", dirpath, path);
     }
 
@@ -120,6 +176,7 @@ static int do_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     DIR *dp;
     struct dirent *de;
     char paths[100];
+   
     strcpy(paths, path);
     // (void) offset;
     // (void) fi;
@@ -133,7 +190,13 @@ static int do_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
             memset(&st, 0, sizeof(st));
             st.st_ino = de->d_ino;
             st.st_mode = de->d_type << 12;
-            res = (filler(buf, de->d_name, &st, 0));
+              char temp[1000];
+            strcpy(temp, de->d_name);
+            if(mode==1)
+            {
+                encrypt(temp);
+            }
+            res = (filler(buf, temp, &st, 0));
                 if(res!=0) {
                     break;
                 }
@@ -148,7 +211,7 @@ static int do_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 static int do_mkdir(const char *path, mode_t mode){
     printf("enter => mkdir\n");
     // printf("%s", path);
-    char fpath[500] = "/home/syubban/Documents";
+    char fpath[500] = "/home/iqbaalpratama/Documents";
     strcat(fpath, path);
     char paths[100];
     strcpy(paths, path);
@@ -164,14 +227,45 @@ static int do_rename(const char *from, const char *to){
     // rename the file, directory, or other object "from" to the target "to"
     // source and target don't have to be in the same directory
     int res;
-    char fpath_from[500] = "/home/syubban/Documents", fpath_to[500] = "/home/syubban/Documents";
-    strcat(fpath_from, from);
-    strcat(fpath_to, to);
+    char ffrom[1000];
+    if (strcmp(from, "/") == 0)
+    {
+        from = dirpath;
+        sprintf(ffrom, "%s", from);
+    }
+    else 
+    {
+        char temp[1000];
+        strcpy(temp, from);
+
+        if(strncmp(from, "/encv1_", 6) == 0)
+            decrypt(temp);
+
+        sprintf(ffrom, "%s%s", dirpath, temp);
+    }
+
+    char fto[1000];
+    if (strcmp(to, "/") == 0)
+    {
+        to = dirpath;
+        sprintf(fto, "%s", to);
+    }
+    else 
+    {
+        char temp[1000];
+        strcpy(temp, to);
+
+        if(strncmp(to, "/encv1_", 6) == 0)
+            decrypt(temp);
+
+        sprintf(fto, "%s%s", dirpath, temp);
+    }
+
     char joins[1000];
-    sprintf(joins, "%s::%s", from, to);
+    sprintf(joins, "%s::%s", ffrom, fto);
     
     if(print_info_command("RENAME", joins)){
-        res = rename(fpath_from, fpath_to);
+        res = rename(ffrom, fto);
         if(res == -1){
             return -errno;
         }else{
@@ -207,8 +301,23 @@ static int do_readlink(const char *path, char *buf, size_t size){
     printf("enter => readlink\n");
     //If path is a symbolic link, fill buf with its target, up to size
     int res;
-    char fpath[1000] = "/home/syubban/Documents";
-    strcat(fpath, path);
+    char fpath[1000];
+
+    if (strcmp(path, "/") == 0)
+    {
+        path = dirpath;
+        sprintf(fpath, "%s", path);
+    }
+    else 
+    {
+        char temp[1000];
+        strcpy(temp, path);
+
+        if(strstr(path, "/encv1_")!=NULL)
+            decrypt(temp);
+
+        sprintf(fpath, "%s%s", dirpath, temp);
+    }
     char paths[100];
     strcpy(paths, path);
     if(print_info_command("READLINK", paths)){
@@ -232,8 +341,23 @@ static int do_mknod(const char *path, mode_t mode, dev_t rdev){
     printf("enter => mknod\n");
     //make special (device) file, FIFO, or socket
     int res;
-    char fpath[1000] = "/home/syubban/Documents";
-    strcat(fpath, path);
+   char fpath[1000];
+
+    if (strcmp(path, "/") == 0)
+    {
+        path = dirpath;
+        sprintf(fpath, "%s", path);
+    }
+    else 
+    {
+        char temp[1000];
+        strcpy(temp, path);
+
+        if(strstr(path, "/encv1_")!=NULL)
+            decrypt(temp);
+
+        sprintf(fpath, "%s%s", dirpath, temp);
+    }
     char paths[100];
     strcpy(paths, path);
     if(print_info_command("MKNOD", paths)){
@@ -258,53 +382,68 @@ static int do_mknod(const char *path, mode_t mode, dev_t rdev){
     return 0;
 }
 
-static int do_symlink(const char *from, const char *to){
-    printf("enter => symlink");
-    // create symbolic link named "from" which, when evaluated will lead to "to"
-    int res;
-    char fpath_from[500] = "/home/syubban/Documents", fpath_to[500] = "/home/syubban/Documents";
-    strcat(fpath_from, from);
-    strcat(fpath_to, to);
-    char joins[1000];
-    sprintf(joins, "%s::%s", from, to);
+// static int do_symlink(const char *from, const char *to){
+//     printf("enter => symlink");
+//     // create symbolic link named "from" which, when evaluated will lead to "to"
+//     int res;
+//     char fpath_from[500] = "/home/iqbaalpratama/Documents", fpath_to[500] = "/home/iqbaalpratama/Documents";
+//     strcat(fpath_from, from);
+//     strcat(fpath_to, to);
+//     char joins[1000];
+//     sprintf(joins, "%s::%s", from, to);
     
-    if(print_info_command("SYMLINK", joins)){
-        res = rename(fpath_from, fpath_to);
-        if(res == -1){
-            return -errno;
-        }else{
-            printf("penulisan dan symlink sukses");
-        }
-    }
-    return 0;
-}
+//     if(print_info_command("SYMLINK", joins)){
+//         res = rename(fpath_from, fpath_to);
+//         if(res == -1){
+//             return -errno;
+//         }else{
+//             printf("penulisan dan symlink sukses");
+//         }
+//     }
+//     return 0;
+// }
 
-static int do_link(const char *from, const char *to){
-    printf("enter => link");
-    int res;
-    char fpath_from[500] = "/home/syubban/Documents", fpath_to[500] = "/home/syubban/Documents";
-    strcat(fpath_from, from);
-    strcat(fpath_to, to);
-    char joins[1000];
-    sprintf(joins, "%s::%s", from, to);
+// static int do_link(const char *from, const char *to){
+//     printf("enter => link");
+//     int res;
+//     char fpath_from[500] = "/home/iqbaalpratama/Documents", fpath_to[500] = "/home/iqbaalpratama/Documents";
+//     strcat(fpath_from, from);
+//     strcat(fpath_to, to);
+//     char joins[1000];
+//     sprintf(joins, "%s::%s", from, to);
     
-    if(print_info_command("LINK", joins)){
-        res = rename(fpath_from, fpath_to);
-        if(res == -1){
-            return -errno;
-        }else{
-            printf("penulisan dan link sukses");
-        }
-    }
-    return 0;
-}
+//     if(print_info_command("LINK", joins)){
+//         res = rename(fpath_from, fpath_to);
+//         if(res == -1){
+//             return -errno;
+//         }else{
+//             printf("penulisan dan link sukses");
+//         }
+//     }
+//     return 0;
+// }
 
 static int do_chmod(const char *path, uid_t uid, gid_t gid, mode_t mode){
     printf("enter => chmod");
     // Change the given object's owner and group to the provided values.
     int res;
-    char fpath[500] = "/home/syubban/Documents";
-    strcat(fpath, path);
+    char fpath[1000];
+
+    if (strcmp(path, "/") == 0)
+    {
+        path = dirpath;
+        sprintf(fpath, "%s", path);
+    }
+    else 
+    {
+        char temp[1000];
+        strcpy(temp, path);
+
+        if(strstr(path, "/encv1_")!=NULL)
+            decrypt(temp);
+
+        sprintf(fpath, "%s%s", dirpath, temp);
+    }
     char paths[100];
     strcpy(paths, path);
     if(print_warning_command("CHMOD", paths)){
@@ -321,8 +460,23 @@ static int do_chmod(const char *path, uid_t uid, gid_t gid, mode_t mode){
 static int do_chown(const char *path, uid_t uid, gid_t gid){
     printf("enter => chown");
     int res;
-    char fpath[500] = "/home/syubban/Documents";
-    strcat(fpath, path);
+    char fpath[1000];
+
+    if (strcmp(path, "/") == 0)
+    {
+        path = dirpath;
+        sprintf(fpath, "%s", path);
+    }
+    else 
+    {
+        char temp[1000];
+        strcpy(temp, path);
+
+        if(strstr(path, "/encv1_")!=NULL)
+            decrypt(temp);
+
+        sprintf(fpath, "%s%s", dirpath, temp);
+    }
     char paths[100];
     strcpy(paths, path);
     if(print_warning_command("CHOWN", paths)){
@@ -339,8 +493,23 @@ static int do_chown(const char *path, uid_t uid, gid_t gid){
 static int do_truncate(const char *path, off_t size){
     printf("enter => truncate");
     int res;
-    char fpath[500] = "/home/syubban/Documents";
-    strcat(fpath, path);
+    char fpath[1000];
+
+    if (strcmp(path, "/") == 0)
+    {
+        path = dirpath;
+        sprintf(fpath, "%s", path);
+    }
+    else 
+    {
+        char temp[1000];
+        strcpy(temp, path);
+
+        if(strstr(path, "/encv1_")!=NULL)
+            decrypt(temp);
+
+        sprintf(fpath, "%s%s", dirpath, temp);
+    }
     char paths[100];
     strcpy(paths, path);
     if(print_warning_command("TRUNCATE", paths)){
@@ -362,11 +531,26 @@ static int do_utimens(const char *path, off_t size){
 #endif
 
 static int do_open(const char *path, struct fuse_file_info* fi){
-    printf("enter => open");
+    printf("enter => open\n");
     int res;
-    char fpath[500] = "/home/syubban/Documents";
-    strcat(fpath, path);
-    char paths[100];
+    char fpath[1000];
+
+    if (strcmp(path, "/") == 0)
+    {
+        path = dirpath;
+        sprintf(fpath, "%s", path);
+    }
+    else 
+    {
+        char temp[1000];
+        strcpy(temp, path);
+
+        if(strstr(path, "/encv1_")!=NULL)
+            decrypt(temp);
+
+        sprintf(fpath, "%s%s", dirpath, temp);
+    }
+    char paths[1000];
     strcpy(paths, path);
     if(print_warning_command("OPEN", paths)){
         res = open(fpath, fi->flags);
@@ -386,11 +570,25 @@ static int do_read(const char* path, char *buf, size_t size, off_t offset,
     int fd;
 	int res;
 
-    char fpath[500] = "/home/syubban/Documents";
-    strcat(fpath, path);
-    char paths[100];
-    strcpy(paths, path);
+    char fpath[1000];
 
+    if (strcmp(path, "/") == 0)
+    {
+        path = dirpath;
+        sprintf(fpath, "%s", path);
+    }
+    else 
+    {
+        char temp[1000];
+        strcpy(temp, path);
+
+        if(strstr(path, "/encv1_")!=NULL)
+            decrypt(temp);
+
+        sprintf(fpath, "%s%s", dirpath, temp);
+    }
+    char paths[1000];
+    strcpy(paths, path);
     if(print_info_command("READ", paths)){
         (void) fi;
         fd = open(fpath, O_RDONLY);
@@ -416,8 +614,23 @@ static int do_write(const char* path, char *buf, size_t size, off_t offset,
     int fd;
 	int res;
 
-    char fpath[500] = "/home/syubban/Documents";
-    strcat(fpath, path);
+    char fpath[1000];
+
+    if (strcmp(path, "/") == 0)
+    {
+        path = dirpath;
+        sprintf(fpath, "%s", path);
+    }
+    else 
+    {
+        char temp[1000];
+        strcpy(temp, path);
+
+        if(strstr(path, "/encv1_")!=NULL)
+            decrypt(temp);
+
+        sprintf(fpath, "%s%s", dirpath, temp);
+    }
     char paths[100];
     strcpy(paths, path);
 
@@ -443,7 +656,7 @@ static int do_write(const char* path, char *buf, size_t size, off_t offset,
 static int do_statfs(const char* path, struct statvfs* stbuf){
     printf("enter => statfs");
     int res;
-    char fpath[500] = "/home/syubban/Documents";
+    char fpath[500] = "/home/iqbaalpratama/Documents";
     strcat(fpath, path);
     char paths[100];
     strcpy(paths, path);
@@ -458,10 +671,6 @@ static int do_statfs(const char* path, struct statvfs* stbuf){
     return 0;
 }
 
-static int do_create(){
-    printf("enter => create");
-    return 0;
-}
 
 static int do_release(const char* path, struct fuse_file_info *fi){
     printf("enter => release");
@@ -478,26 +687,26 @@ static int do_fsync(const char* path, int isdatasync, struct fuse_file_info* fi)
     return 0;
 }
 
-#ifdef HAVE_SETXATTR
-static int do_setxattr(const char* path, const char* name, const char* value, size_t size, int flags){
-    printf("enter => setxattr");
-    return 0;
-}
-static int do_getxattr(const char* path, const char* name, char* value, size_t size){
-    printf("enter => getxattr");
-    return 0;
-}
+// #ifdef HAVE_SETXATTR
+// static int do_setxattr(const char* path, const char* name, const char* value, size_t size, int flags){
+//     printf("enter => setxattr");
+//     return 0;
+// }
+// static int do_getxattr(const char* path, const char* name, char* value, size_t size){
+//     printf("enter => getxattr");
+//     return 0;
+// }
 
-static int do_listxattr(const char* path, const char* list, size_t size){
-    printf("enter => listxattr");
-    return 0;
-}
+// static int do_listxattr(const char* path, const char* list, size_t size){
+//     printf("enter => listxattr");
+//     return 0;
+// }
 
-static int do_removexattr(){
-    printf("enter => removexattr");
-    return 0;
-}
-#endif
+// static int do_removexattr(){
+//     printf("enter => removexattr");
+//     return 0;
+// }
+// #endif
 
 /*<====================================================================>*/
 /*<====================================================================>*/
@@ -506,7 +715,7 @@ static int do_removexattr(){
 static int do_rmdir(const char *path){
     printf("Enter => rmdir\n");
     int res;
-    char fpath[500] = "/home/syubban/Documents";
+    char fpath[500] = "/home/iqbaalpratama/Documents";
     strcat(fpath, path);
     char paths[100];
     strcpy(paths, path);
@@ -524,7 +733,7 @@ static int do_rmdir(const char *path){
 static int do_unlink(const char *path, mode_t mode){
     printf("Enter => rmdir\n");
     int res;
-    char fpath[500] = "/home/syubban/Documents";
+    char fpath[500] = "/home/iqbaalpratama/Documents";
     strcat(fpath, path);
     char paths[100];
     strcpy(paths, path);
@@ -551,8 +760,8 @@ static struct fuse_operations do_operation = {
     // .access = do_access,
     .readlink = do_readlink,
     .mknod = do_mknod,
-    .symlink = do_symlink,
-    .link = do_link,
+    // .symlink = do_symlink,
+    // .link = do_link,
     .chmod = do_chmod,
     .chown = do_chown,
     .truncate = do_truncate,
@@ -565,16 +774,15 @@ static struct fuse_operations do_operation = {
     .read = do_read,
     .write = do_write,
     .statfs = do_statfs,
-    .create = do_create,
     .release = do_release,
     .fsync = do_fsync,
     
-    #ifdef HAVE_SETXATTR
-    .setxattr = do_setxattr,
-    .getxattr = do_getxattr,
-    .listxattr = do_listxattr,
-    .removexattr = do_removexattr,
-    #endif
+    // #ifdef HAVE_SETXATTR
+    // .setxattr = do_setxattr,
+    // .getxattr = do_getxattr,
+    // .listxattr = do_listxattr,
+    // .removexattr = do_removexattr,
+    // #endif
 };
 
 
