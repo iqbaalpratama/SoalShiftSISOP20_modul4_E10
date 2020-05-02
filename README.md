@@ -22,6 +22,124 @@ Note  : Dalam penamaan file ‘/’ diabaikan, dan ekstensi tidak perlu di encry
 6.  Metode enkripsi pada suatu direktori juga berlaku kedalam direktori lainnya yang ada didalamnya.
 
 **Jawaban :**
+```c
+char cipher[100]="9(ku@AW1[Lmvgax6q`5Y2Ry?+sF!^HKQiBXCUSe&0M.b%rI'7d)o4~VfZ*{#:}ETt$3J-zpc]lnh8,GwP_ND|jO";
+
+void encrypt(char* str)
+{
+	if(!strcmp(str,".") || !strcmp(str,"..")) return;
+	int panjang = strlen(str);
+    int start=0;
+    for(int i=panjang;i>=0;i--)
+	{
+		if(str[i]=='.')
+        {
+            panjang=i;
+            break;
+        }
+        
+	}
+    for (int i = 1; i < panjang; i++)
+    {
+        if (str[i] == '/')
+        {
+            start = i;
+            break;
+        }
+      
+    }
+
+	for(int i=start;i<panjang;i++)
+	{
+		for(int j=0;j<87;j++)
+		{
+			if(str[i]==cipher[j])
+			{
+				str[i] = cipher[(j+10)%87];
+				break;
+			}
+		}
+	}
+}
+
+
+void decrypt(char* str)
+{
+	if(!strcmp(str,".") || !strcmp(str,"..")) return;
+	int panjang = strlen(str);
+    int start=0;
+    for(int i=panjang;i>=0;i--)
+	{
+		if(str[i]=='.')
+        {
+            panjang=i;
+            break;
+        }
+        
+	}
+    for (int i = 1; i < panjang; i++)
+    {
+        if (str[i] == '/' || str[i + 1] == '\0')
+        {
+            start = i+1;
+            break;
+        }
+      
+    }
+	for(int i=start;i<panjang;i++)
+	{
+		for(int j=0;j<87;j++)
+		{
+			if(str[i]==cipher[j])
+			{
+				str[i] = cipher[(j+77)%87];
+				break;
+			}
+		}
+	}
+}
+```
+Kode diatas adalah kode enkripsi dan dekripsi untuk versi 1.
+```c
+void encrypt(char* str)
+{
+	if(!strcmp(str,".") || !strcmp(str,"..")) return;
+	int panjang = strlen(str);
+    int start=0;
+    for(int i=panjang;i>=0;i--)
+	{
+		if(str[i]=='.')
+        {
+            panjang=i;
+            break;
+        }
+        
+	}
+    for (int i = 1; i < panjang; i++)
+    {
+        if (str[i] == '/')
+        {
+            start = i;
+            break;
+        }
+      
+    }
+
+	for(int i=start;i<panjang;i++)
+	{
+		for(int j=0;j<87;j++)
+		{
+			if(str[i]==cipher[j])
+			{
+				str[i] = cipher[(j+10)%87];
+				break;
+			}
+		}
+	}
+}
+```
+Untuk kode enkripsi `if(!strcmp(str,".") || !strcmp(str,"..")) return;` digunakan agar pada folder dengan nama ",
+
 
 **2. Enkripsi versi 2:**
 1.  Jika sebuah direktori dibuat dengan awalan “encv2_”, maka direktori tersebut akan menjadi direktori terenkripsi menggunakan metode enkripsi v2.
